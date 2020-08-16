@@ -3,17 +3,18 @@ package data
 import (
 	"context"
 
+	"github.com/Zucke/ContactManager/pkg/authentication"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 //User is the user data
-type User struct {
-	ID       primitive.ObjectID `json:"_id" bson:"_id,omitempty"`
-	Nickname string             `json:"nickname" bson:"nickname"`
-	Password string             `json:"password,omitempty" bson:"password,omitempty"`
-}
+// type User struct {
+// 	ID       primitive.ObjectID `json:"_id" bson:"_id,omitempty"`
+// 	Nickname string             `json:"nickname" bson:"nickname"`
+// 	Password string             `json:"password,omitempty" bson:"password,omitempty"`
+// }
 
 //UserData is the db data
 type UserData struct {
@@ -21,14 +22,9 @@ type UserData struct {
 	coll *mongo.Collection
 }
 
-//ComparePassword macth with a password
-func (u *User) ComparePassword(password string) bool {
-	return u.Password == password
-}
-
 //VarifyUserByNickname encharge of query if a user exist
-func (ud *UserData) VarifyUserByNickname(ctx context.Context, nickname string) (User, error) {
-	result := User{}
+func (ud *UserData) VarifyUserByNickname(ctx context.Context, nickname string) (authentication.User, error) {
+	result := authentication.User{}
 	err := ud.coll.FindOne(ctx, bson.M{"nickname": nickname}).Decode(&result)
 	if err != nil {
 		return result, ErrorNotFount
@@ -38,7 +34,7 @@ func (ud *UserData) VarifyUserByNickname(ctx context.Context, nickname string) (
 }
 
 //NewUser add a new User
-func (ud *UserData) NewUser(ctx context.Context, info *User) error {
+func (ud *UserData) NewUser(ctx context.Context, info *authentication.User) error {
 	if _, err := ud.VarifyUserByNickname(ctx, info.Nickname); err == nil {
 		return ErrorUserExist
 	}

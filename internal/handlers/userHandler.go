@@ -11,7 +11,6 @@ import (
 	"github.com/Zucke/ContactManager/pkg/response"
 	"github.com/go-chi/jwtauth"
 	"github.com/go-chi/render"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 const expiryIn = 2 * time.Minute
@@ -20,7 +19,7 @@ var tokenAuth *jwtauth.JWTAuth
 
 //LoginUser login a user
 func LoginUser(w http.ResponseWriter, r *http.Request) {
-	var result, requestUser data.User
+	var result, requestUser authentication.User
 	err := json.NewDecoder(r.Body).Decode(&requestUser)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusBadRequest, "Failed to parse user")
@@ -60,7 +59,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 
 //NewUser create a new user
 func NewUser(w http.ResponseWriter, r *http.Request) {
-	var newUser *data.User
+	var newUser *authentication.User
 	err := json.NewDecoder(r.Body).Decode(&newUser)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusBadRequest, "Failed to parse user")
@@ -88,13 +87,6 @@ func NewUser(w http.ResponseWriter, r *http.Request) {
 
 //DeleteUser delete the corrend logged user
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
-	token, err := authentication.ValidateToken(w, r)
-	if !IsValidToken(*token, err, w, r) {
-		return
-	}
-	id := token.Claims.(*data.Claim).ID
 	userData := data.NewUserData()
-	ctx := context.WithValue(context.Background(), primitive.ObjectID{}, id)
-	userData.DeleteUser(ctx)
-
+	userData.DeleteUser(r.Context())
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Zucke/ContactManager/internal/handlers"
+	"github.com/Zucke/ContactManager/pkg/authentication"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 )
@@ -30,13 +31,15 @@ func (serv *Server) getRoutes() http.Handler {
 	r.Use(middleware.Recoverer)
 	r.Post("/register", handlers.NewUser)
 	r.Post("/login", handlers.LoginUser)
-	r.Post("/contacts/getall", handlers.GetAllContacts)
-	r.Post("/contacts/{name}", handlers.FDUContactByName)
-	r.Delete("/contacts/{name}", handlers.FDUContactByName)
-	r.Delete("/contacts/deleteall", handlers.DeleteAll)
-	r.Delete("/deleteme", handlers.DeleteUser)
-	r.Put("/contacts/{name}", handlers.FDUContactByName)
-	r.Post("/contacts/insertone", handlers.AddContact)
+	contacsGroup := r.Group(nil)
+	contacsGroup.Use(authentication.ValidateMiddleware)
+	contacsGroup.Post("/contacts/getall", handlers.GetAllContacts)
+	contacsGroup.Post("/contacts/{name}", handlers.FDUContactByName)
+	contacsGroup.Delete("/contacts/{name}", handlers.FDUContactByName)
+	contacsGroup.Delete("/contacts/deleteall", handlers.DeleteAll)
+	contacsGroup.Delete("/deleteme", handlers.DeleteUser)
+	contacsGroup.Put("/contacts/{name}", handlers.FDUContactByName)
+	contacsGroup.Post("/contacts/insertone", handlers.AddContact)
 
 	return r
 

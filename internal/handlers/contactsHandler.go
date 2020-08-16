@@ -1,12 +1,10 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 
 	"github.com/Zucke/ContactManager/internal/data"
-	"github.com/Zucke/ContactManager/pkg/authentication"
 	"github.com/Zucke/ContactManager/pkg/response"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
@@ -15,17 +13,9 @@ import (
 
 //GetAllContacts return all contact for a user
 func GetAllContacts(w http.ResponseWriter, r *http.Request) {
-	token, err := authentication.ValidateToken(w, r)
 
-	if !IsValidToken(*token, err, w, r) {
-		return
-	}
-
-	id := token.Claims.(*data.Claim).ID
-
-	ctx := context.WithValue(context.Background(), primitive.ObjectID{}, id)
 	contacts := data.NewUserContact()
-	results, err := contacts.GetAll(ctx)
+	results, err := contacts.GetAll(r.Context())
 
 	if err != nil {
 		response.HTTPError(w, r, http.StatusNotFound, "Invalid Token")
@@ -40,13 +30,8 @@ func GetAllContacts(w http.ResponseWriter, r *http.Request) {
 //AddContact add a contact to a especific user
 func AddContact(w http.ResponseWriter, r *http.Request) {
 	var contact data.Contact
-	token, err := authentication.ValidateToken(w, r)
 
-	if !IsValidToken(*token, err, w, r) {
-		return
-	}
-
-	err = json.NewDecoder(r.Body).Decode(&contact)
+	err := json.NewDecoder(r.Body).Decode(&contact)
 	if err != nil {
 		response.HTTPError(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -57,20 +42,18 @@ func AddContact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := token.Claims.(*data.Claim).ID
-	contact.UserID = id
+	contact.UserID = r.Context().Value(primitive.ObjectID{}).(primitive.ObjectID)
 
-	ctx := context.WithValue(context.Background(), primitive.ObjectID{}, id)
 	var userContact = data.NewUserContact()
 
-	c, err := userContact.GetByName(ctx, contact.Name)
+	c, err := userContact.GetByName(r.Context(), contact.Name)
 	if err == nil {
 		response.HTTPError(w, r, http.StatusFound, "This contact already exist")
 		render.JSON(w, r, c)
 		return
 	}
 
-	c, err = userContact.GetByNumber(ctx, contact.Number)
+	c, err = userContact.GetByNumber(r.Context(), contact.Number)
 	if err == nil {
 		response.HTTPError(w, r, http.StatusFound, "This number already asociated to a contact name")
 		render.JSON(w, r, c)
@@ -91,15 +74,11 @@ func AddContact(w http.ResponseWriter, r *http.Request) {
 //FDUContactByName this find, delete or update a contact depent of the method used on request
 func FDUContactByName(w http.ResponseWriter, r *http.Request) {
 	var contact data.Contact
-	token, err := authentication.ValidateToken(w, r)
+	var err error
 
-	if !IsValidToken(*token, err, w, r) {
-		return
-	}
 	name := chi.URLParam(r, "name")
-	id := token.Claims.(*data.Claim).ID
 	userContact := data.NewUserContact()
-	ctx := context.WithValue(context.Background(), primitive.ObjectID{}, id)
+	ctx := r.Context()
 
 	switch r.Method {
 
@@ -140,15 +119,8 @@ func FDUContactByName(w http.ResponseWriter, r *http.Request) {
 
 //DeleteAll delete all contact for a user
 func DeleteAll(w http.ResponseWriter, r *http.Request) {
-	token, err := authentication.ValidateToken(w, r)
-	if !IsValidToken(*token, err, w, r) {
-		return
-	}
-
 	userContact := data.NewUserContact()
-	id := token.Claims.(*data.Claim).ID
-	ctx := context.WithValue(context.Background(), primitive.ObjectID{}, id)
-	userContact.DeleteAll(ctx)
+	err := userContact.DeleteAll(r.Context())
 	if err != nil {
 		response.HTTPError(w, r, http.StatusNotFound, err.Error())
 		return
